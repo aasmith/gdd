@@ -1,10 +1,50 @@
+require "date"
+
 module GddCalculator
-  # Single day GDD given a method's base and cap
+  # Single-sine with horizontal cutoff GDD calculation.
+  # Models daily temperature as a sine curve between temp_min and temp_max,
+  # then integrates the area above base and below cap over 24 hours.
   def self.daily(temp_min, temp_max, base, cap)
-    t_min = [temp_min, base].max
-    t_max = [temp_max, cap].min
-    t_max = [t_max, base].max
-    [(t_max + t_min) / 2.0 - base, 0].max
+    # Edge cases
+    return 0.0 if temp_max <= base
+    return cap - base if temp_min >= cap
+
+    mean = (temp_max + temp_min) / 2.0
+    amp  = (temp_max - temp_min) / 2.0
+
+    # If amplitude is zero (flat day), simple calc
+    if amp < 0.001
+      return [[mean - base, 0].max, cap - base].min
+    end
+
+    # GDD above base
+    if temp_min >= base
+      # Entire day above base
+      gdd_base = mean - base
+    else
+      # Sine crosses base — find the fraction above
+      theta_base = Math.asin((base - mean) / amp)
+      gdd_base = (1.0 / (2 * Math::PI)) *
+        ((mean - base) * (Math::PI - 2 * theta_base) +
+         2 * amp * Math.cos(theta_base))
+    end
+
+    # Subtract excess above cap (horizontal cutoff)
+    if temp_max > cap
+      if temp_min >= cap
+        # Entire day above cap — excess is mean - cap
+        gdd_cap_excess = mean - cap
+      else
+        theta_cap = Math.asin((cap - mean) / amp)
+        gdd_cap_excess = (1.0 / (2 * Math::PI)) *
+          ((mean - cap) * (Math::PI - 2 * theta_cap) +
+           2 * amp * Math.cos(theta_cap))
+      end
+    else
+      gdd_cap_excess = 0.0
+    end
+
+    [gdd_base - gdd_cap_excess, 0].max
   end
 
   # Given an array of {date:, temp_min:, temp_max:} and base/cap,
