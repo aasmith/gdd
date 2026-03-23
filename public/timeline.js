@@ -217,6 +217,7 @@ const Timeline = {
 
     enter.append("rect").attr("class", "planting-bar");
     enter.append("text").attr("class", "planting-label");
+    enter.append("text").attr("class", "drag-end-label");
 
     const merged = enter.merge(bars);
 
@@ -264,10 +265,20 @@ const Timeline = {
           d3.select(this.parentNode).select(".planting-label")
             .attr("x", self.xScale(newDate) + 6);
 
+          // Show end date outside the bar
+          const endX = self.xScale(endDate);
+          const label = endDateStr || "n/a";
+          d3.select(this.parentNode).select(".drag-end-label")
+            .attr("x", endX + 4)
+            .attr("display", null)
+            .text(label);
+
           d._dragDate = dateStr;
         })
         .on("end", function(event, d) {
           d3.select(this).attr("opacity", 0.85);
+          d3.select(this.parentNode).select(".drag-end-label")
+            .attr("display", "none");
           if (d._dragDate && d._dragDate !== d.plant_date) {
             if (self.onPlantingUpdated) {
               self.onPlantingUpdated(d.id, { plant_date: d._dragDate });
@@ -288,6 +299,12 @@ const Timeline = {
           self._formatDate(new Date()));
         return `${d.crop_name} ${d.variety || ""} (${Math.round(gddSoFar)}/${d.gdd_required})`;
       });
+
+    merged.select(".drag-end-label")
+      .attr("y", this.barHeight / 2 + 4)
+      .attr("fill", "#666")
+      .attr("font-size", "11px")
+      .attr("display", "none");
   },
 
   drawWeekLines(dayOfWeek) {
