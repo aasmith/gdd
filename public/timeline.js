@@ -370,18 +370,7 @@ const Timeline = {
           .attr("stroke-width", dd => dd.id === d.id ? 2 : 0);
         // Show start/end date labels on selected bar
         self.barsGroup.selectAll(".planting-group").each(function(dd) {
-          const show = dd.id === d.id;
-          const group = d3.select(this);
-          group.select(".drag-start-label")
-            .attr("x", self.xScale(dd.plantDate) - 4)
-            .attr("display", show ? null : "none")
-            .text(dd.plant_date);
-          const endDateStr = GDD.dateForGdd(dd.gdd_method_id, dd.plant_date, dd.gdd_required);
-          const endDate = endDateStr ? new Date(endDateStr + "T00:00:00") : self.seasonEnd;
-          group.select(".drag-end-label")
-            .attr("x", self.xScale(endDate) + 4)
-            .attr("display", show ? null : "none")
-            .text(endDateStr || "n/a");
+          self._showDateLabels(d3.select(this), dd.plant_date, dd.gdd_method_id, dd.gdd_required, dd.id === d.id);
         });
         if (self.onPlantingClicked) self.onPlantingClicked(d);
       })
@@ -418,25 +407,13 @@ const Timeline = {
             .attr("x", self.xScale(newDate) + 6);
 
           // Show start/end dates outside the bar
-          d3.select(this.parentNode).select(".drag-start-label")
-            .attr("x", self.xScale(newDate) - 4)
-            .attr("display", null)
-            .text(dateStr);
-
-          const endX = self.xScale(endDate);
-          d3.select(this.parentNode).select(".drag-end-label")
-            .attr("x", endX + 4)
-            .attr("display", null)
-            .text(endDateStr || "n/a");
+          self._showDateLabels(d3.select(this.parentNode), dateStr, d.gdd_method_id, d.gdd_required, true);
 
           d._dragDate = dateStr;
         })
         .on("end", function(event, d) {
           d3.select(this).attr("opacity", 0.85);
-          d3.select(this.parentNode).select(".drag-start-label")
-            .attr("display", "none");
-          d3.select(this.parentNode).select(".drag-end-label")
-            .attr("display", "none");
+          self._showDateLabels(d3.select(this.parentNode), d.plant_date, d.gdd_method_id, d.gdd_required, false);
 
           const dateChanged = d._dragDate && d._dragDate !== d.plant_date;
           const rowChanged = d._dragRow != null && d._dragRow !== d._dragStartRow;
@@ -567,6 +544,32 @@ const Timeline = {
       d.setDate(d.getDate() - diff);
     }
     return d;
+  },
+
+  _showDateLabels(group, plantDateStr, methodId, gddRequired, visible) {
+    const plantDate = new Date(plantDateStr + "T00:00:00");
+    const endDateStr = GDD.dateForGdd(methodId, plantDateStr, gddRequired);
+    const endDate = endDateStr ? new Date(endDateStr + "T00:00:00") : this.seasonEnd;
+    group.select(".drag-start-label")
+      .attr("x", this.xScale(plantDate) - 4)
+      .attr("display", visible ? null : "none")
+      .text(plantDateStr);
+    group.select(".drag-end-label")
+      .attr("x", this.xScale(endDate) + 4)
+      .attr("display", visible ? null : "none")
+      .text(this._endLabel(plantDateStr, endDateStr));
+  },
+
+  _daysBetween(dateStrA, dateStrB) {
+    const a = new Date(dateStrA + "T00:00:00");
+    const b = new Date(dateStrB + "T00:00:00");
+    return Math.round((b - a) / 86400000);
+  },
+
+  _endLabel(startDateStr, endDateStr) {
+    if (!endDateStr) return "n/a";
+    const days = this._daysBetween(startDateStr, endDateStr);
+    return `${endDateStr} (${days}d)`;
   },
 
   _formatDate(date) {
