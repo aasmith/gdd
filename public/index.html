@@ -9,7 +9,32 @@
 <body>
   <header>
     <h1>GDD Garden Planner</h1>
+    <button id="options-btn" title="Options">&#9881;</button>
   </header>
+  <div id="options-panel" class="hidden">
+    <h3>Options</h3>
+    <div class="option-row">
+      <label for="opt-season-start">Season start</label>
+      <input type="text" id="opt-season-start" placeholder="MM-DD" size="5">
+    </div>
+    <div class="option-row">
+      <label for="opt-season-end">Season end</label>
+      <input type="text" id="opt-season-end" placeholder="MM-DD" size="5">
+    </div>
+    <div class="option-row">
+      <label for="opt-week-day">Weekly grid lines</label>
+      <select id="opt-week-day">
+        <option value="0">Sunday</option>
+        <option value="1">Monday</option>
+        <option value="2">Tuesday</option>
+        <option value="3">Wednesday</option>
+        <option value="4">Thursday</option>
+        <option value="5">Friday</option>
+        <option value="6">Saturday</option>
+      </select>
+    </div>
+    <button id="options-save" class="options-save-btn">Save</button>
+  </div>
   <main>
     <aside id="sidebar">
       <div id="sidebar-section-methods">

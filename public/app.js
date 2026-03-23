@@ -82,4 +82,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     await API.deletePlanting(id);
     await refreshPlantings();
   };
+
+  // Options panel
+  const optionsPanel = document.getElementById("options-panel");
+  const optSeasonStart = document.getElementById("opt-season-start");
+  const optSeasonEnd = document.getElementById("opt-season-end");
+  const optWeekDay = document.getElementById("opt-week-day");
+
+  optSeasonStart.value = settings.season_start;
+  optSeasonEnd.value = settings.season_end;
+  optWeekDay.value = settings.week_line_day ?? 6;
+
+  document.getElementById("options-btn").addEventListener("click", () => {
+    optionsPanel.classList.toggle("hidden");
+  });
+
+  document.getElementById("options-save").addEventListener("click", async () => {
+    const updated = await API.updateSettings({
+      season_start: optSeasonStart.value,
+      season_end: optSeasonEnd.value,
+      week_line_day: parseInt(optWeekDay.value),
+    });
+    optionsPanel.classList.add("hidden");
+    // Reload the page to rebuild the timeline with new season bounds
+    location.reload();
+  });
 });

@@ -7,10 +7,11 @@ module Routes
 
       app.put "/api/settings" do
         data = JSON.parse(request.body.read)
-        DB[:settings].where(id: 1).update(
-          season_start: data["season_start"],
-          season_end: data["season_end"]
-        )
+        updates = {}
+        %w[season_start season_end week_line_day].each do |f|
+          updates[f.to_sym] = data[f] if data.key?(f)
+        end
+        DB[:settings].where(id: 1).update(updates)
         json DB[:settings].first
       end
     end

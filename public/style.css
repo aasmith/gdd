@@ -10,11 +10,75 @@ header {
   background: #2d5016;
   color: white;
   padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 header h1 {
   font-size: 18px;
   font-weight: 600;
+}
+
+#options-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+#options-btn:hover { opacity: 1; }
+
+#options-panel {
+  position: absolute;
+  right: 20px;
+  top: 48px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  padding: 16px;
+  z-index: 200;
+  width: 240px;
+}
+
+#options-panel h3 {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.option-row {
+  margin-bottom: 10px;
+}
+
+.option-row label {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 3px;
+}
+
+.option-row input,
+.option-row select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.options-save-btn {
+  width: 100%;
+  padding: 6px;
+  margin-top: 4px;
+  background: #2d5016;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
 }
 
 main {

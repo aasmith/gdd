@@ -68,6 +68,10 @@ const Timeline = {
         .text("Today");
     }
 
+    // Weekly gridlines group (behind everything)
+    this.gridGroup = this.g.append("g").attr("class", "grid-lines");
+    this.drawWeekLines(this.settings.week_line_day ?? 6);
+
     // Ghost bar for drag preview
     this.ghost = this.g.append("rect")
       .attr("class", "ghost-bar")
@@ -197,6 +201,7 @@ const Timeline = {
     );
     this.svg.attr("height", height + this.margin.top + this.margin.bottom);
     this.g.select(".today-line").attr("y2", height);
+    this.gridGroup.selectAll("line").attr("y2", height);
 
     // Bars
     const bars = this.barsGroup.selectAll(".planting-group")
@@ -277,6 +282,23 @@ const Timeline = {
           self._formatDate(new Date()));
         return `${d.crop_name} ${d.variety || ""} (${Math.round(gddSoFar)}/${d.gdd_required})`;
       });
+  },
+
+  drawWeekLines(dayOfWeek) {
+    this.gridGroup.selectAll("*").remove();
+    // Walk from season start to end, draw a line on each matching day
+    const d = new Date(this.seasonStart);
+    while (d <= this.seasonEnd) {
+      if (d.getDay() === dayOfWeek) {
+        const x = this.xScale(d);
+        this.gridGroup.append("line")
+          .attr("x1", x).attr("x2", x)
+          .attr("y1", 0).attr("y2", this.minHeight)
+          .attr("stroke", "#e0e0e0")
+          .attr("stroke-width", 0.5);
+      }
+      d.setDate(d.getDate() + 1);
+    }
   },
 
   _formatDate(date) {
