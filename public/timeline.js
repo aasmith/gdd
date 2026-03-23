@@ -265,6 +265,21 @@ const Timeline = {
         self.barsGroup.selectAll(".planting-bar")
           .attr("stroke", dd => dd.id === d.id ? "#ff0000" : "none")
           .attr("stroke-width", dd => dd.id === d.id ? 2 : 0);
+        // Show start/end date labels on selected bar
+        self.barsGroup.selectAll(".planting-group").each(function(dd) {
+          const show = dd.id === d.id;
+          const group = d3.select(this);
+          group.select(".drag-start-label")
+            .attr("x", self.xScale(dd.plantDate) - 4)
+            .attr("display", show ? null : "none")
+            .text(dd.plant_date);
+          const endDateStr = GDD.dateForGdd(dd.gdd_method_id, dd.plant_date, dd.gdd_required);
+          const endDate = endDateStr ? new Date(endDateStr + "T00:00:00") : self.seasonEnd;
+          group.select(".drag-end-label")
+            .attr("x", self.xScale(endDate) + 4)
+            .attr("display", show ? null : "none")
+            .text(endDateStr || "n/a");
+        });
         if (self.onPlantingClicked) self.onPlantingClicked(d);
       })
       .call(d3.drag()
