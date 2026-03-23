@@ -1,6 +1,6 @@
 // timeline.js — D3 Gantt chart with drag-to-create and drag-to-move
 const Timeline = {
-  margin: { top: 40, right: 20, bottom: 30, left: 20 },
+  margin: { top: 40, right: 16, bottom: 30, left: 16 },
   barHeight: 28,
   barGap: 6,
   minHeight: 400,
