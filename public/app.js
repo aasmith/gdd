@@ -55,14 +55,44 @@ document.addEventListener("DOMContentLoaded", async () => {
   Sidebar.onMethodsChanged = refreshMethods;
 
   // Wire up: create planting on drop
-  Timeline.onPlantingCreated = async (crop, dateStr) => {
-    await API.createPlanting({ crop_id: crop.id, plant_date: dateStr });
+  Timeline.onPlantingCreated = async (crop, dateStr, row) => {
+    await API.createPlanting({ crop_id: crop.id, plant_date: dateStr, row: row });
     await refreshPlantings();
   };
 
   // Wire up: update planting on drag-move
   Timeline.onPlantingUpdated = async (id, data) => {
     await API.updatePlanting(id, data);
+    await refreshPlantings();
+  };
+
+  // Wire up: auto-pack a row — resolve all overlaps left to right
+  Timeline.onPlantingPush = async (movedPlanting, newDate, newRow) => {
+    // Commit the moved planting first
+    await API.updatePlanting(movedPlanting.id, { plant_date: newDate, row: newRow });
+
+    // Get fresh data
+    const all = await API.getPlantings();
+
+    // All plantings in this row, sorted by start date
+    const rowPlantings = all
+      .filter(p => p.row === newRow)
+      .sort((a, b) => a.plant_date.localeCompare(b.plant_date));
+
+    // Walk left to right. Track the end of the previous bar.
+    // If the next bar starts before that end, push it forward.
+    let cursor = null;
+    for (const p of rowPlantings) {
+      if (cursor && p.plant_date < cursor) {
+        await API.updatePlanting(p.id, { plant_date: cursor });
+        const endStr = GDD.dateForGdd(p.gdd_method_id, cursor, p.gdd_required);
+        cursor = endStr || cursor;
+      } else {
+        const endStr = GDD.dateForGdd(p.gdd_method_id, p.plant_date, p.gdd_required);
+        cursor = endStr || p.plant_date;
+      }
+    }
+
     await refreshPlantings();
   };
 

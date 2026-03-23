@@ -215,6 +215,46 @@ main {
 /* Drop target highlight */
 #timeline.drag-over { background: #f0f8e8; }
 
+/* Conflict resolution bar */
+#conflict-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 300;
+  font-size: 13px;
+}
+
+#conflict-bar span { color: #666; }
+
+#conflict-bar button {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#conflict-push {
+  background: #2d5016;
+  color: white;
+}
+
+#conflict-push:hover { background: #3a6b1e; }
+
+#conflict-undo {
+  background: #eee;
+  color: #333;
+}
+
 /* Sidebar sections */
 .sidebar-divider {
   border: none;

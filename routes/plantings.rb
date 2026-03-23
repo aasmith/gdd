@@ -14,6 +14,7 @@ module Routes
             Sequel[:plantings][:first_harvest],
             Sequel[:plantings][:removal_date],
             Sequel[:plantings][:notes],
+            Sequel[:plantings][:row],
             Sequel[:crops][:name].as(:crop_name),
             Sequel[:crops][:variety],
             Sequel[:crops][:gdd].as(:gdd_required),
@@ -34,7 +35,8 @@ module Routes
           emergence_date: data["emergence_date"],
           first_harvest: data["first_harvest"],
           removal_date: data["removal_date"],
-          notes: data["notes"]
+          notes: data["notes"],
+          row: data["row"]
         )
         json DB[:plantings][id: id]
       end
@@ -42,7 +44,7 @@ module Routes
       app.put "/api/plantings/:id" do
         data = JSON.parse(request.body.read)
         updates = {}
-        %w[crop_id plant_date seeding_date emergence_date first_harvest removal_date notes].each do |f|
+        %w[crop_id plant_date seeding_date emergence_date first_harvest removal_date notes row].each do |f|
           updates[f.to_sym] = data[f] if data.key?(f)
         end
         DB[:plantings].where(id: params[:id]).update(updates)

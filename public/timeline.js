@@ -4,6 +4,7 @@ const Timeline = {
   barHeight: 28,
   barGap: 6,
   minHeight: 400,
+  successionSnapPx: 20, // pixels from bar end to trigger succession snap
 
   snapEnabled: false,
 
@@ -11,9 +12,10 @@ const Timeline = {
     this.container = container;
     this.settings = settings;
     this.plantings = [];
-    this.onPlantingCreated = null; // callback
-    this.onPlantingUpdated = null; // callback
-    this.onPlantingClicked = null; // callback
+    this.rowData = []; // [{plantDate, endDate, ...}, ...] grouped by row
+    this.onPlantingCreated = null;
+    this.onPlantingUpdated = null;
+    this.onPlantingClicked = null;
 
     const year = new Date().getFullYear();
     this.seasonStart = new Date(`${year}-${settings.season_start}T00:00:00`);
@@ -109,8 +111,73 @@ const Timeline = {
       .attr("stroke-dasharray", "4,2")
       .attr("display", "none");
 
+    // Succession indicator
+    this.successionHighlight = this.g.append("rect")
+      .attr("class", "succession-highlight")
+      .attr("width", 4)
+      .attr("height", this.barHeight)
+      .attr("rx", 2)
+      .attr("fill", "#f0a030")
+      .attr("display", "none");
+
     // Bars group
     this.barsGroup = this.g.append("g").attr("class", "bars");
+  },
+
+  // --- Auto-packing ---
+
+  // Assign rows to plantings. Respects existing row assignments,
+  // auto-packs any with row === null into the first available row.
+  _packRows(data) {
+    // Sort by plant date for packing
+    const sorted = [...data].sort((a, b) => a.plantDate - b.plantDate);
+    const rows = []; // rows[i] = latest end date in that row
+
+    sorted.forEach(d => {
+      if (d.row != null) {
+        // Explicit row assignment — ensure rows array is big enough
+        while (rows.length <= d.row) rows.push(null);
+        d._row = d.row;
+        // Update row end date
+        if (!rows[d._row] || d.endDate > rows[d._row]) {
+          rows[d._row] = d.endDate;
+        }
+      }
+    });
+
+    // Pack unassigned
+    sorted.forEach(d => {
+      if (d.row != null) return;
+      let placed = false;
+      for (let r = 0; r < rows.length; r++) {
+        if (!rows[r] || d.plantDate >= rows[r]) {
+          d._row = r;
+          rows[r] = d.endDate;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        d._row = rows.length;
+        rows.push(d.endDate);
+      }
+    });
+
+    this.numRows = rows.length || 1;
+    return data;
+  },
+
+  // Find which bar's end is near the given pixel coordinates
+  _findSuccessionTarget(mx, my) {
+    for (const d of this._renderData || []) {
+      const barEndX = this.xScale(d.endDate);
+      const barY = d._row * (this.barHeight + this.barGap);
+      if (Math.abs(mx - barEndX) < this.successionSnapPx &&
+          my >= barY && my <= barY + this.barHeight) {
+        return d;
+      }
+    }
+    return null;
   },
 
   setupDropZone() {
@@ -120,47 +187,71 @@ const Timeline = {
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
 
-      // Show ghost bar
       const crop = this._dragCrop;
       if (!crop) return;
 
-      const [mx] = d3.pointer(e, this.g.node());
-      const rawDate = this.xScale.invert(mx);
-      const date = this._snapDate(rawDate);
+      const [mx, my] = d3.pointer(e, this.g.node());
+
+      // Check for succession snap
+      const target = this._findSuccessionTarget(mx, my);
+      let date, row;
+
+      if (target) {
+        // Snap to end of target bar
+        const endDateStr = GDD.dateForGdd(target.gdd_method_id, target.plant_date, target.gdd_required);
+        date = endDateStr ? new Date(endDateStr + "T00:00:00") : null;
+        row = target._row;
+        if (date) {
+          this.successionHighlight
+            .attr("x", this.xScale(date) - 2)
+            .attr("y", row * (this.barHeight + this.barGap))
+            .attr("display", null);
+        }
+      } else {
+        const rawDate = this.xScale.invert(mx);
+        date = this._snapDate(rawDate);
+        row = Math.max(0, Math.floor(my / (this.barHeight + this.barGap)));
+        this.successionHighlight.attr("display", "none");
+      }
+
+      if (!date) {
+        this.ghost.attr("display", "none");
+        return;
+      }
+
       const dateStr = this._formatDate(date);
       const endDateStr = GDD.dateForGdd(crop.gdd_method_id, dateStr, crop.gdd);
+      const y = row * (this.barHeight + this.barGap);
 
       if (endDateStr) {
         const x = this.xScale(date);
         const endDate = new Date(endDateStr + "T00:00:00");
         const w = this.xScale(endDate) - x;
-        const y = this.plantings.length * (this.barHeight + this.barGap);
-
         this.ghost
-          .attr("x", x)
-          .attr("y", y)
+          .attr("x", x).attr("y", y)
           .attr("width", Math.max(w, 2))
+          .attr("fill", "rgba(45, 80, 22, 0.2)")
+          .attr("stroke", "#2d5016")
           .attr("display", null);
       } else {
-        // Won't finish — show red ghost
         const x = this.xScale(date);
         const w = this.xScale(this.seasonEnd) - x;
-        const y = this.plantings.length * (this.barHeight + this.barGap);
-
         this.ghost
-          .attr("x", x)
-          .attr("y", y)
+          .attr("x", x).attr("y", y)
           .attr("width", Math.max(w, 2))
           .attr("fill", "rgba(231, 76, 60, 0.2)")
           .attr("stroke", "#e74c3c")
           .attr("display", null);
       }
+
+      this._dropInfo = { dateStr, row };
     });
 
     el.addEventListener("dragleave", () => {
       this.ghost.attr("display", "none")
         .attr("fill", "rgba(45, 80, 22, 0.2)")
         .attr("stroke", "#2d5016");
+      this.successionHighlight.attr("display", "none");
     });
 
     el.addEventListener("drop", async e => {
@@ -168,33 +259,42 @@ const Timeline = {
       this.ghost.attr("display", "none")
         .attr("fill", "rgba(45, 80, 22, 0.2)")
         .attr("stroke", "#2d5016");
+      this.successionHighlight.attr("display", "none");
 
       let crop;
       try {
         crop = JSON.parse(e.dataTransfer.getData("application/json"));
       } catch { return; }
 
-      const [mx] = d3.pointer(e, this.g.node());
-      const date = this._snapDate(this.xScale.invert(mx));
-      const dateStr = this._formatDate(date);
+      const [mx, my] = d3.pointer(e, this.g.node());
 
-      if (this.onPlantingCreated) {
-        this.onPlantingCreated(crop, dateStr);
+      // Check for succession snap
+      const target = this._findSuccessionTarget(mx, my);
+      let dateStr, row;
+
+      if (target) {
+        const endDateStr = GDD.dateForGdd(target.gdd_method_id, target.plant_date, target.gdd_required);
+        dateStr = endDateStr;
+        row = target._row;
+      } else {
+        const date = this._snapDate(this.xScale.invert(mx));
+        dateStr = this._formatDate(date);
+        row = Math.max(0, Math.floor(my / (this.barHeight + this.barGap)));
+      }
+
+      if (dateStr && this.onPlantingCreated) {
+        this.onPlantingCreated(crop, dateStr, row);
       }
     });
 
     // Track drag crop from sidebar
     document.addEventListener("dragstart", e => {
       try {
-        // Will be set after data transfer is available
         const data = e.dataTransfer.getData("application/json");
         if (data) this._dragCrop = JSON.parse(data);
-      } catch {
-        // getData not available during dragstart in some browsers
-      }
+      } catch {}
     });
 
-    // Fallback: grab crop from sidebar dragstart
     document.getElementById("crop-list").addEventListener("dragstart", e => {
       const item = e.target.closest(".crop-item");
       if (!item) return;
@@ -211,20 +311,23 @@ const Timeline = {
 
   render() {
     const self = this;
-    const data = this.plantings.map((p, i) => {
+    const data = this.plantings.map(p => {
       const plantDate = new Date(p.plant_date + "T00:00:00");
       const endDateStr = GDD.dateForGdd(p.gdd_method_id, p.plant_date, p.gdd_required);
       const endDate = endDateStr
         ? new Date(endDateStr + "T00:00:00")
         : this.seasonEnd;
       const willFinish = endDateStr !== null;
-      return { ...p, plantDate, endDate, willFinish, index: i };
+      return { ...p, plantDate, endDate, willFinish };
     });
+
+    this._packRows(data);
+    this._renderData = data;
 
     // Resize SVG
     const height = Math.max(
       this.minHeight,
-      data.length * (this.barHeight + this.barGap) + 60
+      this.numRows * (this.barHeight + this.barGap) + 60
     );
     this.svg.attr("height", height + this.margin.top + this.margin.bottom);
     this.g.select(".today-line").attr("y2", height);
@@ -246,7 +349,7 @@ const Timeline = {
 
     const merged = enter.merge(bars);
 
-    merged.attr("transform", (d, i) => `translate(0, ${i * (this.barHeight + this.barGap)})`);
+    merged.attr("transform", d => `translate(0, ${d._row * (this.barHeight + this.barGap)})`);
 
     merged.select(".planting-bar")
       .attr("x", d => this.xScale(d.plantDate))
@@ -254,7 +357,7 @@ const Timeline = {
       .attr("height", this.barHeight)
       .attr("rx", 3)
       .attr("fill", d => d.willFinish ? "#5a9e3a" : "#e74c3c")
-      .attr("opacity", d => d.projected ? 0.7 : 0.85)
+      .attr("opacity", 0.85)
       .attr("cursor", "grab")
       .attr("stroke", d => self.selectedId === d.id ? "#ff0000" : "none")
       .attr("stroke-width", d => self.selectedId === d.id ? 2 : 0)
@@ -286,6 +389,7 @@ const Timeline = {
         .on("start", function(event, d) {
           d3.select(this).attr("opacity", 1);
           d._dragOffsetX = event.x - self.xScale(d.plantDate);
+          d._dragStartRow = d._row;
         })
         .on("drag", function(event, d) {
           const newDate = self._snapDate(self.xScale.invert(event.x - (d._dragOffsetX || 0)));
@@ -295,6 +399,14 @@ const Timeline = {
             ? new Date(endDateStr + "T00:00:00")
             : self.seasonEnd;
           const willFinish = endDateStr !== null;
+
+          // Vertical row movement — use absolute cursor position in the SVG
+          const [, absY] = d3.pointer(event, self.g.node());
+          const newRow = Math.max(0, Math.floor(absY / (self.barHeight + self.barGap)));
+          d._dragRow = newRow;
+
+          d3.select(this.parentNode)
+            .attr("transform", `translate(0, ${newRow * (self.barHeight + self.barGap)})`);
 
           d3.select(this)
             .attr("x", self.xScale(newDate))
@@ -325,10 +437,27 @@ const Timeline = {
             .attr("display", "none");
           d3.select(this.parentNode).select(".drag-end-label")
             .attr("display", "none");
-          if (d._dragDate && d._dragDate !== d.plant_date) {
-            if (self.onPlantingUpdated) {
-              self.onPlantingUpdated(d.id, { plant_date: d._dragDate });
-            }
+
+          const dateChanged = d._dragDate && d._dragDate !== d.plant_date;
+          const rowChanged = d._dragRow != null && d._dragRow !== d._dragStartRow;
+
+          if (!dateChanged && !rowChanged) return;
+
+          const newDate = d._dragDate || d.plant_date;
+          const newRow = d._dragRow ?? d._row;
+
+          // Check for overlaps in the target row
+          const overlaps = self._findOverlaps(d.id, newDate, d.gdd_method_id, d.gdd_required, newRow);
+
+          if (overlaps.length > 0) {
+            // Save undo state
+            const undoState = { id: d.id, plant_date: d.plant_date, row: d.row };
+            self._showConflictBar(d, newDate, newRow, overlaps, undoState);
+          } else if (self.onPlantingUpdated) {
+            const updates = {};
+            if (dateChanged) updates.plant_date = newDate;
+            if (rowChanged) updates.row = newRow;
+            self.onPlantingUpdated(d.id, updates);
           }
         })
       );
@@ -360,9 +489,60 @@ const Timeline = {
       .attr("display", "none");
   },
 
+  // Find plantings in the same row that overlap with a proposed placement
+  _findOverlaps(movedId, plantDateStr, methodId, gddRequired, row) {
+    const endDateStr = GDD.dateForGdd(methodId, plantDateStr, gddRequired);
+    const startDate = new Date(plantDateStr + "T00:00:00");
+    const endDate = endDateStr ? new Date(endDateStr + "T00:00:00") : this.seasonEnd;
+
+    return (this._renderData || []).filter(d => {
+      if (d.id === movedId) return false;
+      if (d._row !== row) return false;
+      // Overlap: bars intersect if one starts before the other ends and vice versa
+      return d.plantDate < endDate && d.endDate > startDate;
+    });
+  },
+
+  // Show a conflict resolution bar near the dropped planting
+  _showConflictBar(movedPlanting, newDate, newRow, overlaps, undoState) {
+    this._dismissConflictBar();
+
+    const bar = document.createElement("div");
+    bar.id = "conflict-bar";
+    bar.innerHTML = `
+      <span>Overlap detected</span>
+      <button id="conflict-push">Auto-pack</button>
+      <button id="conflict-undo">Undo</button>
+    `;
+    document.body.appendChild(bar);
+
+    const self = this;
+
+    document.getElementById("conflict-push").addEventListener("click", async () => {
+      self._dismissConflictBar();
+      if (self.onPlantingPush) {
+        await self.onPlantingPush(movedPlanting, newDate, newRow);
+      }
+    });
+
+    document.getElementById("conflict-undo").addEventListener("click", async () => {
+      self._dismissConflictBar();
+      if (self.onPlantingUpdated) {
+        await self.onPlantingUpdated(undoState.id, {
+          plant_date: undoState.plant_date,
+          row: undoState.row,
+        });
+      }
+    });
+  },
+
+  _dismissConflictBar() {
+    const existing = document.getElementById("conflict-bar");
+    if (existing) existing.remove();
+  },
+
   drawWeekLines(dayOfWeek) {
     this.gridGroup.selectAll("*").remove();
-    // Walk from season start to end, draw a line on each matching day
     const d = new Date(this.seasonStart);
     while (d <= this.seasonEnd) {
       if (d.getDay() === dayOfWeek) {
@@ -381,7 +561,6 @@ const Timeline = {
     if (!this.snapEnabled) return date;
     const weekDay = this.settings.week_line_day ?? 6;
     const d = new Date(date);
-    // Always snap backward to the most recent matching weekday
     const diff = (d.getDay() - weekDay + 7) % 7;
     d.setDate(d.getDate() - diff);
     d.setHours(0, 0, 0, 0);
