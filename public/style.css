@@ -117,10 +117,36 @@ main {
   margin-bottom: 12px;
 }
 
-#timeline {
+#timeline-area {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#timeline {
   padding: 0;
+}
+
+#gdd-chart {
+  border-top: 1px solid #ddd;
+  padding: 0;
+}
+
+#gdd-chart .chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 16px;
+  font-size: 11px;
+  color: #666;
+}
+
+#gdd-chart .chart-legend .swatch {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  margin-right: 4px;
+  vertical-align: middle;
 }
 
 .crop-item {

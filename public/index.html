@@ -11,6 +11,7 @@
     <h1>GDD Garden Planner</h1>
     <div class="header-controls">
       <button id="snap-btn" class="header-btn" title="Toggle snap to grid">&#9906; Snap</button>
+      <button id="chart-btn" class="header-btn" title="Toggle GDD chart">&#9636; Chart</button>
       <button id="options-btn" class="header-btn" title="Options">&#9881; Options</button>
     </div>
   </header>
@@ -52,7 +53,10 @@
         <button id="add-crop-btn" class="sidebar-add-btn">+ Add Crop</button>
       </div>
     </aside>
-    <section id="timeline"></section>
+    <div id="timeline-area">
+      <section id="timeline"></section>
+      <section id="gdd-chart" class="hidden"></section>
+    </div>
   </main>
   <div id="detail-panel" class="hidden"></div>
 
@@ -62,6 +66,7 @@
   <script src="/sidebar.js"></script>
   <script src="/timeline.js"></script>
   <script src="/detail.js"></script>
+  <script src="/gdd-chart.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

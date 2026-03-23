@@ -90,6 +90,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     snapBtn.classList.toggle("active", Timeline.snapEnabled);
   });
 
+  // GDD chart toggle
+  GddChart.init(document.getElementById("gdd-chart"), settings, methods);
+  const chartBtn = document.getElementById("chart-btn");
+  const chartEl = document.getElementById("gdd-chart");
+  chartBtn.addEventListener("click", () => {
+    const showing = chartEl.classList.toggle("hidden");
+    chartBtn.classList.toggle("active", !showing);
+    if (!showing) GddChart.render();
+  });
+
   // Options panel
   const optionsPanel = document.getElementById("options-panel");
   const optSeasonStart = document.getElementById("opt-season-start");
