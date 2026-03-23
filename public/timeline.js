@@ -1,6 +1,6 @@
 // timeline.js — D3 Gantt chart with drag-to-create and drag-to-move
 const Timeline = {
-  margin: { top: 40, right: 16, bottom: 30, left: 16 },
+  margin: { top: 54, right: 16, bottom: 30, left: 16 },
   barHeight: 28,
   barGap: 6,
   minHeight: 400,
@@ -41,12 +41,36 @@ const Timeline = {
     this.g = this.svg.append("g")
       .attr("transform", `translate(${this.margin.left},${this.margin.top})`);
 
-    // X axis
+    // X axis — months
     this.g.append("g")
       .attr("class", "x-axis")
+      .attr("transform", "translate(0,-14)")
       .call(d3.axisTop(this.xScale)
         .ticks(d3.timeMonth.every(1))
-        .tickFormat(d3.timeFormat("%b")));
+        .tickFormat(d3.timeFormat("%b"))
+        .tickSize(0))
+      .select(".domain").remove();
+
+    // X axis — weekly dates aligned to gridline day
+    const weekDay = this.settings.week_line_day ?? 6;
+    const weekDates = [];
+    const wd = new Date(this.seasonStart);
+    while (wd <= this.seasonEnd) {
+      if (wd.getDay() === weekDay) weekDates.push(new Date(wd));
+      wd.setDate(wd.getDate() + 1);
+    }
+    this.g.append("g")
+      .attr("class", "x-axis-dates")
+      .selectAll("text")
+      .data(weekDates)
+      .enter()
+      .append("text")
+      .attr("x", d => this.xScale(d))
+      .attr("y", -3)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#999")
+      .attr("font-size", "9px")
+      .text(d => `${d.getMonth() + 1}/${d.getDate()}`);
 
     // Today line
     const today = new Date();
