@@ -5,6 +5,8 @@ const Timeline = {
   barGap: 6,
   minHeight: 400,
 
+  snapEnabled: false,
+
   init(container, settings) {
     this.container = container;
     this.settings = settings;
@@ -99,7 +101,8 @@ const Timeline = {
       if (!crop) return;
 
       const [mx] = d3.pointer(e, this.g.node());
-      const date = this.xScale.invert(mx);
+      const rawDate = this.xScale.invert(mx);
+      const date = this._snapDate(rawDate);
       const dateStr = this._formatDate(date);
       const endDateStr = GDD.dateForGdd(crop.gdd_method_id, dateStr, crop.gdd);
 
@@ -148,7 +151,7 @@ const Timeline = {
       } catch { return; }
 
       const [mx] = d3.pointer(e, this.g.node());
-      const date = this.xScale.invert(mx);
+      const date = this._snapDate(this.xScale.invert(mx));
       const dateStr = this._formatDate(date);
 
       if (this.onPlantingCreated) {
@@ -241,7 +244,7 @@ const Timeline = {
       .call(d3.drag()
         .on("start", function() { d3.select(this).attr("opacity", 1); })
         .on("drag", function(event, d) {
-          const newDate = self.xScale.invert(event.x);
+          const newDate = self._snapDate(self.xScale.invert(event.x));
           const dateStr = self._formatDate(newDate);
           const endDateStr = GDD.dateForGdd(d.gdd_method_id, dateStr, d.gdd_required);
           const endDate = endDateStr
@@ -299,6 +302,17 @@ const Timeline = {
       }
       d.setDate(d.getDate() + 1);
     }
+  },
+
+  _snapDate(date) {
+    if (!this.snapEnabled) return date;
+    const weekDay = this.settings.week_line_day ?? 6;
+    const d = new Date(date);
+    // Always snap backward to the most recent matching weekday
+    const diff = (d.getDay() - weekDay + 7) % 7;
+    d.setDate(d.getDate() - diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
   },
 
   _formatDate(date) {

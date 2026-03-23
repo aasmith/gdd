@@ -20,16 +20,30 @@ header h1 {
   font-weight: 600;
 }
 
-#options-btn {
+.header-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.header-btn {
   background: none;
-  border: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
   color: white;
-  font-size: 20px;
+  font-size: 13px;
+  padding: 4px 10px;
   cursor: pointer;
   opacity: 0.8;
 }
 
-#options-btn:hover { opacity: 1; }
+.header-btn:hover { opacity: 1; }
+
+.header-btn.active {
+  opacity: 1;
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.6);
+}
 
 #options-panel {
   position: absolute;

@@ -83,6 +83,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     await refreshPlantings();
   };
 
+  // Snap toggle
+  const snapBtn = document.getElementById("snap-btn");
+  snapBtn.addEventListener("click", () => {
+    Timeline.snapEnabled = !Timeline.snapEnabled;
+    snapBtn.classList.toggle("active", Timeline.snapEnabled);
+  });
+
   // Options panel
   const optionsPanel = document.getElementById("options-panel");
   const optSeasonStart = document.getElementById("opt-season-start");
