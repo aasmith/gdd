@@ -1,0 +1,112 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f5f5f5;
+  color: #333;
+}
+
+header {
+  background: #2d5016;
+  color: white;
+  padding: 12px 20px;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+main {
+  display: flex;
+  height: calc(100vh - 48px);
+}
+
+#sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: white;
+  border-right: 1px solid #ddd;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+#sidebar h2 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+#timeline {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.crop-item {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: #eef6e8;
+  border: 1px solid #c5ddb5;
+  border-radius: 4px;
+  cursor: grab;
+  font-size: 13px;
+}
+
+.crop-item:active { cursor: grabbing; }
+
+.crop-item .variety {
+  color: #666;
+  font-size: 11px;
+}
+
+.crop-item .gdd-info {
+  color: #888;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.hidden { display: none; }
+
+#detail-panel {
+  position: fixed;
+  right: 20px;
+  top: 80px;
+  width: 300px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  padding: 16px;
+  z-index: 100;
+}
+
+#detail-panel h3 {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+#detail-panel label {
+  font-size: 12px;
+  color: #666;
+  display: block;
+}
+
+#detail-panel input[type="date"],
+#detail-panel textarea {
+  width: 100%;
+  padding: 4px 6px;
+  margin-top: 2px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+/* Timeline axis */
+.x-axis path, .x-axis line { stroke: #ccc; }
+.x-axis text { fill: #666; font-size: 12px; }
+
+/* Drop target highlight */
+#timeline.drag-over { background: #f0f8e8; }

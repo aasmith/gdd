@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDD Garden Planner</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>GDD Garden Planner</h1>
+  </header>
+  <main>
+    <aside id="sidebar">
+      <h2>Crops</h2>
+      <div id="crop-list"></div>
+    </aside>
+    <section id="timeline"></section>
+  </main>
+  <div id="detail-panel" class="hidden"></div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="/api.js"></script>
+  <script src="/gdd.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/timeline.js"></script>
+  <script src="/detail.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
