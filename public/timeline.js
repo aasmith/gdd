@@ -242,9 +242,12 @@ const Timeline = {
         if (self.onPlantingClicked) self.onPlantingClicked(d);
       })
       .call(d3.drag()
-        .on("start", function() { d3.select(this).attr("opacity", 1); })
+        .on("start", function(event, d) {
+          d3.select(this).attr("opacity", 1);
+          d._dragOffsetX = event.x - self.xScale(d.plantDate);
+        })
         .on("drag", function(event, d) {
-          const newDate = self._snapDate(self.xScale.invert(event.x));
+          const newDate = self._snapDate(self.xScale.invert(event.x - (d._dragOffsetX || 0)));
           const dateStr = self._formatDate(newDate);
           const endDateStr = GDD.dateForGdd(d.gdd_method_id, dateStr, d.gdd_required);
           const endDate = endDateStr
