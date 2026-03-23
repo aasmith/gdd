@@ -16,6 +16,26 @@ const API = {
     return (await fetch("/api/gdd_methods")).json();
   },
 
+  async createMethod(data) {
+    return (await fetch("/api/gdd_methods", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })).json();
+  },
+
+  async updateMethod(id, data) {
+    return (await fetch(`/api/gdd_methods/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })).json();
+  },
+
+  async deleteMethod(id) {
+    return (await fetch(`/api/gdd_methods/${id}`, { method: "DELETE" })).json();
+  },
+
   async getCrops() {
     return (await fetch("/api/crops")).json();
   },

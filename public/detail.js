@@ -91,5 +91,9 @@ const Detail = {
 
   hide() {
     this.panel.classList.add("hidden");
+    Timeline.selectedId = null;
+    Timeline.barsGroup.selectAll(".planting-bar")
+      .attr("stroke", "none")
+      .attr("stroke-width", 0);
   },
 };

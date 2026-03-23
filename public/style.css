@@ -110,3 +110,118 @@ main {
 
 /* Drop target highlight */
 #timeline.drag-over { background: #f0f8e8; }
+
+/* Sidebar sections */
+.sidebar-divider {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 14px 0;
+}
+
+.sidebar-add-btn {
+  width: 100%;
+  padding: 6px;
+  margin-top: 8px;
+  background: transparent;
+  border: 1px dashed #aaa;
+  border-radius: 4px;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sidebar-add-btn:hover { background: #f5f5f5; }
+
+/* Method items */
+.method-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background: #f0eef6;
+  border: 1px solid #d5d0e5;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.method-range {
+  color: #888;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+/* Crop item header with edit/delete */
+.crop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Inline action buttons */
+.item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.crop-item:hover .item-actions,
+.method-item:hover .item-actions { opacity: 1; }
+
+.item-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #888;
+  padding: 0 3px;
+  line-height: 1;
+}
+
+.item-actions button:hover { color: #333; }
+.item-actions .btn-delete:hover { color: #e74c3c; }
+
+/* Sidebar inline forms */
+.sidebar-form {
+  padding: 8px;
+  margin-top: 6px;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-form input,
+.sidebar-form select {
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.form-buttons button {
+  flex: 1;
+  padding: 4px;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.form-buttons .btn-save {
+  background: #2d5016;
+  color: white;
+}
+
+.form-buttons .btn-cancel {
+  background: #eee;
+  color: #666;
+}

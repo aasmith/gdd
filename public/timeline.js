@@ -222,8 +222,15 @@ const Timeline = {
       .attr("fill", d => d.willFinish ? "#5a9e3a" : "#e74c3c")
       .attr("opacity", d => d.projected ? 0.7 : 0.85)
       .attr("cursor", "grab")
+      .attr("stroke", d => self.selectedId === d.id ? "#ff0000" : "none")
+      .attr("stroke-width", d => self.selectedId === d.id ? 2 : 0)
+      .attr("paint-order", "stroke")
       .on("click", function(event, d) {
         event.stopPropagation();
+        self.selectedId = d.id;
+        self.barsGroup.selectAll(".planting-bar")
+          .attr("stroke", dd => dd.id === d.id ? "#ff0000" : "none")
+          .attr("stroke-width", dd => dd.id === d.id ? 2 : 0);
         if (self.onPlantingClicked) self.onPlantingClicked(d);
       })
       .call(d3.drag()
