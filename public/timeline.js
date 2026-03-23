@@ -558,12 +558,14 @@ const Timeline = {
   },
 
   _snapDate(date) {
-    if (!this.snapEnabled) return date;
-    const weekDay = this.settings.week_line_day ?? 6;
     const d = new Date(date);
-    const diff = (d.getDay() - weekDay + 7) % 7;
-    d.setDate(d.getDate() - diff);
     d.setHours(0, 0, 0, 0);
+    if (this.snapEnabled) {
+      // Snap to weekly gridline day
+      const weekDay = this.settings.week_line_day ?? 6;
+      const diff = (d.getDay() - weekDay + 7) % 7;
+      d.setDate(d.getDate() - diff);
+    }
     return d;
   },
 
