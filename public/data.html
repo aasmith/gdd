@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDD Data — GDD Garden Planner</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    main.data-main {
+      display: block;
+      height: calc(100vh - 48px);
+      overflow: auto;
+      padding: 16px;
+    }
+
+    .data-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+
+    .data-controls label { color: #666; }
+    .data-controls input {
+      padding: 4px 6px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    .data-controls button {
+      padding: 4px 12px;
+      background: #2d5016;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .data-info {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    #data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #data-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    #data-table th {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      text-align: right;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #data-table th:first-child { text-align: left; }
+
+    #data-table td {
+      border: 1px solid #eee;
+      padding: 4px 8px;
+      text-align: right;
+    }
+
+    #data-table td:first-child { text-align: left; }
+
+    #data-table tr.today { background: #fff8e0; }
+    #data-table tr:hover { background: #f0f8ff; }
+    #data-table tr.today:hover { background: #fff3c0; }
+    #data-table tr.low-data { background: #fff5f0; }
+
+    .col-temp { color: #555; }
+    .col-gdd { color: #2d5016; }
+    .col-cum { color: #7b3294; }
+    .col-years { color: #999; }
+
+    #temp-chart {
+      margin-bottom: 16px;
+      background: white;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+
+    #temp-chart .chart-legend {
+      display: flex;
+      gap: 16px;
+      padding: 4px 16px 8px;
+      font-size: 11px;
+      color: #666;
+    }
+
+    #temp-chart .chart-legend .swatch {
+      display: inline-block;
+      width: 12px;
+      height: 3px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    .toggle-group {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .toggle-group button {
+      background: #eee;
+      color: #333;
+    }
+
+    .toggle-group button.active {
+      background: #2d5016;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GDD Garden Planner</h1>
+    <div class="header-controls">
+      <a href="/" class="header-btn">&#9664; Planner</a>
+    </div>
+  </header>
+  <main class="data-main">
+    <div id="temp-chart"></div>
+    <div class="data-controls">
+      <label>From <input type="date" id="data-from"></label>
+      <label>To <input type="date" id="data-to"></label>
+      <button id="data-load">Load</button>
+      <div class="toggle-group">
+        <button id="toggle-daily" class="active">Daily GDD</button>
+        <button id="toggle-cum">Cumulative</button>
+        <button id="toggle-proj">Projection Basis</button>
+      </div>
+    </div>
+    <div class="data-info" id="data-info"></div>
+    <table id="data-table">
+      <thead id="data-thead"></thead>
+      <tbody id="data-tbody"></tbody>
+    </table>
+  </main>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const year = new Date().getFullYear();
+
+    const fromInput = document.getElementById("data-from");
+    const toInput = document.getElementById("data-to");
+    const loadBtn = document.getElementById("data-load");
+    const thead = document.getElementById("data-thead");
+    const tbody = document.getElementById("data-tbody");
+    const info = document.getElementById("data-info");
+    const toggleDaily = document.getElementById("toggle-daily");
+    const toggleCum = document.getElementById("toggle-cum");
+    const toggleProj = document.getElementById("toggle-proj");
+
+    fromInput.value = `${year}-03-01`;
+    toInput.value = todayStr;
+
+    let view = "daily"; // "daily" | "cum" | "proj"
+    let tableData = null;
+    let projData = null;
+    let chartActualData = null;
+
+    function setView(v) {
+      view = v;
+      toggleDaily.classList.toggle("active", v === "daily");
+      toggleCum.classList.toggle("active", v === "cum");
+      toggleProj.classList.toggle("active", v === "proj");
+      render();
+    }
+
+    toggleDaily.addEventListener("click", () => setView("daily"));
+    toggleCum.addEventListener("click", () => setView("cum"));
+    toggleProj.addEventListener("click", () => {
+      setView("proj");
+    });
+
+    loadBtn.addEventListener("click", load);
+
+    async function load() {
+      const from = fromInput.value;
+      const to = toInput.value;
+      const resp = await fetch(`/api/gdd/table?from=${from}&to=${to}`);
+      tableData = await resp.json();
+      render();
+    }
+
+    async function loadChart() {
+      // Full year projection + full year actuals — independent of table date range
+      const [projResp, actualResp] = await Promise.all([
+        fetch(`/api/gdd/projection_basis?year=${year}`),
+        fetch(`/api/gdd/table?from=${year}-01-01&to=${todayStr}`),
+      ]);
+      projData = await projResp.json();
+      chartActualData = await actualResp.json();
+      renderChart();
+    }
+
+    async function loadProj() {
+      const resp = await fetch(`/api/gdd/projection_basis?year=${year}`);
+      projData = await resp.json();
+    }
+
+    function render() {
+      if (view === "proj") {
+        renderProj();
+      } else {
+        renderTable();
+      }
+    }
+
+    function renderChart() {
+      if (!chartActualData || !projData) return;
+
+      const container = document.getElementById("temp-chart");
+      container.innerHTML = "";
+
+      const margin = { top: 20, right: 16, bottom: 30, left: 45 };
+      const fullWidth = container.clientWidth || 900;
+      const width = fullWidth - margin.left - margin.right;
+      const height = 200;
+
+      const parseDate = d => new Date(d + "T00:00:00");
+
+      // Projected band: full season
+      const projRows = projData.rows;
+      // Actual data: full year, independent of table date range
+      const actualRows = chartActualData.rows;
+
+      // Determine x domain from projection (full season)
+      const xDomain = [parseDate(projRows[0].date), parseDate(projRows[projRows.length - 1].date)];
+
+      // Y domain: covers both projected and actual
+      let yMin = Infinity, yMax = -Infinity;
+      projRows.forEach(r => { yMin = Math.min(yMin, r.temp_min); yMax = Math.max(yMax, r.temp_max); });
+      actualRows.forEach(r => { yMin = Math.min(yMin, r.temp_min); yMax = Math.max(yMax, r.temp_max); });
+      yMin = Math.floor(yMin - 5);
+      yMax = Math.ceil(yMax + 5);
+
+      const xScale = d3.scaleTime().domain(xDomain).range([0, width]);
+      const yScale = d3.scaleLinear().domain([yMin, yMax]).range([height, 0]);
+
+      const svg = d3.select(container).append("svg")
+        .attr("width", fullWidth)
+        .attr("height", height + margin.top + margin.bottom);
+
+      const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Axes
+      g.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(xScale).ticks(d3.timeMonth.every(1)).tickFormat(d3.timeFormat("%b")));
+
+      g.append("g")
+        .call(d3.axisLeft(yScale).ticks(6))
+        .call(g => g.selectAll(".tick line").clone()
+          .attr("x2", width)
+          .attr("stroke", "#f0f0f0")
+          .attr("stroke-width", 0.5));
+
+      // Y label
+      g.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2).attr("y", -32)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#888").attr("font-size", "11px")
+        .text("\u00b0F");
+
+      // Projected band (min-max area)
+      const projArea = d3.area()
+        .x(d => xScale(parseDate(d.date)))
+        .y0(d => yScale(d.temp_min))
+        .y1(d => yScale(d.temp_max));
+
+      g.append("path")
+        .datum(projRows)
+        .attr("fill", "#dce8f5")
+        .attr("stroke", "none")
+        .attr("d", projArea);
+
+      // Projected min/max lines (subtle)
+      const projLineMin = d3.line().x(d => xScale(parseDate(d.date))).y(d => yScale(d.temp_min));
+      const projLineMax = d3.line().x(d => xScale(parseDate(d.date))).y(d => yScale(d.temp_max));
+
+      g.append("path").datum(projRows)
+        .attr("fill", "none").attr("stroke", "#a0bdd8").attr("stroke-width", 0.8)
+        .attr("d", projLineMin);
+      g.append("path").datum(projRows)
+        .attr("fill", "none").attr("stroke", "#a0bdd8").attr("stroke-width", 0.8)
+        .attr("d", projLineMax);
+
+      // Actual band (min-max area)
+      const actualArea = d3.area()
+        .x(d => xScale(parseDate(d.date)))
+        .y0(d => yScale(d.temp_min))
+        .y1(d => yScale(d.temp_max));
+
+      g.append("path")
+        .datum(actualRows)
+        .attr("fill", "rgba(45, 80, 22, 0.15)")
+        .attr("stroke", "none")
+        .attr("d", actualArea);
+
+      // Actual min/max lines
+      const actualLineMin = d3.line().x(d => xScale(parseDate(d.date))).y(d => yScale(d.temp_min));
+      const actualLineMax = d3.line().x(d => xScale(parseDate(d.date))).y(d => yScale(d.temp_max));
+
+      g.append("path").datum(actualRows)
+        .attr("fill", "none").attr("stroke", "#5a9e3a").attr("stroke-width", 1)
+        .attr("d", actualLineMin);
+      g.append("path").datum(actualRows)
+        .attr("fill", "none").attr("stroke", "#2d5016").attr("stroke-width", 1)
+        .attr("d", actualLineMax);
+
+      // Today line
+      const today = new Date();
+      if (today >= xDomain[0] && today <= xDomain[1]) {
+        g.append("line")
+          .attr("x1", xScale(today)).attr("x2", xScale(today))
+          .attr("y1", 0).attr("y2", height)
+          .attr("stroke", "#e74c3c").attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4,3");
+      }
+
+      // Hover tooltip
+      const tooltipLine = g.append("line")
+        .attr("y1", 0).attr("y2", height)
+        .attr("stroke", "#999").attr("stroke-width", 0.5)
+        .attr("display", "none");
+
+      const tooltipBg = g.append("rect")
+        .attr("fill", "white").attr("fill-opacity", 0.92)
+        .attr("stroke", "#ccc").attr("rx", 4)
+        .attr("display", "none");
+
+      const tooltipText = g.append("g").attr("display", "none");
+
+      // Index actual rows by date for lookup
+      const actualByDate = {};
+      actualRows.forEach(r => actualByDate[r.date] = r);
+
+      // Index proj rows by date
+      const projByDate = {};
+      projRows.forEach(r => projByDate[r.date] = r);
+
+      g.append("rect")
+        .attr("width", width).attr("height", height)
+        .attr("fill", "none").attr("pointer-events", "all")
+        .on("mousemove", function(event) {
+          const [mx] = d3.pointer(event, g.node());
+          const date = xScale.invert(mx);
+          const dateStr = date.toISOString().slice(0, 10);
+
+          tooltipLine.attr("x1", mx).attr("x2", mx).attr("display", null);
+          tooltipText.attr("display", null);
+          tooltipBg.attr("display", null);
+
+          const lines = [dateStr];
+          const proj = projByDate[dateStr];
+          const actual = actualByDate[dateStr];
+
+          if (proj) lines.push(`Projected: ${proj.temp_min.toFixed(1)}\u2013${proj.temp_max.toFixed(1)}\u00b0F`);
+          if (actual) lines.push(`Actual: ${actual.temp_min.toFixed(1)}\u2013${actual.temp_max.toFixed(1)}\u00b0F`);
+          if (proj && actual) {
+            const diffMin = (actual.temp_min - proj.temp_min).toFixed(1);
+            const diffMax = (actual.temp_max - proj.temp_max).toFixed(1);
+            lines.push(`\u0394 min ${diffMin > 0 ? "+" : ""}${diffMin}, max ${diffMax > 0 ? "+" : ""}${diffMax}`);
+          }
+
+          tooltipText.selectAll("*").remove();
+          const pad = 8;
+          let ty = pad + 12;
+          lines.forEach((l, i) => {
+            tooltipText.append("text")
+              .attr("x", pad).attr("y", ty)
+              .attr("font-size", "11px")
+              .attr("font-weight", i === 0 ? "600" : "400")
+              .attr("fill", i === 3 ? "#888" : "#333")
+              .text(l);
+            ty += 15;
+          });
+
+          const bbox = tooltipText.node().getBBox();
+          const bgW = bbox.width + pad * 2;
+          const bgH = bbox.height + pad * 2;
+          const tx = (mx + bgW + 12 > width) ? mx - bgW - 8 : mx + 8;
+
+          tooltipBg.attr("x", tx).attr("y", 0).attr("width", bgW).attr("height", bgH);
+          tooltipText.attr("transform", `translate(${tx}, 0)`);
+        })
+        .on("mouseleave", function() {
+          tooltipLine.attr("display", "none");
+          tooltipText.attr("display", "none");
+          tooltipBg.attr("display", "none");
+        });
+
+      // Legend
+      const legend = document.createElement("div");
+      legend.className = "chart-legend";
+      legend.innerHTML = `
+        <span><span class="swatch" style="background:#a0bdd8"></span>Projected min/max</span>
+        <span><span class="swatch" style="background:#dce8f5;height:8px"></span>Projected band</span>
+        <span><span class="swatch" style="background:#2d5016"></span>Actual max</span>
+        <span><span class="swatch" style="background:#5a9e3a"></span>Actual min</span>
+        <span><span class="swatch" style="background:rgba(45,80,22,0.15);height:8px"></span>Actual band</span>
+      `;
+      container.appendChild(legend);
+    }
+
+    function renderTable() {
+      if (!tableData) return;
+      const { methods, rows } = tableData;
+
+      let headerHtml = "<tr><th>Date</th><th>Min (\u00b0F)</th><th>Max (\u00b0F)</th>";
+      methods.forEach(m => {
+        const label = view === "cum" ? `${m.name} (cum)` : m.name;
+        headerHtml += `<th>${label}</th>`;
+      });
+      headerHtml += "</tr>";
+      thead.innerHTML = headerHtml;
+
+      let html = "";
+      for (const row of rows) {
+        const isToday = row.date === todayStr;
+        const cls = isToday ? ' class="today"' : "";
+        html += `<tr${cls}>`;
+        html += `<td>${row.date}</td>`;
+        html += `<td class="col-temp">${row.temp_min.toFixed(1)}</td>`;
+        html += `<td class="col-temp">${row.temp_max.toFixed(1)}</td>`;
+        methods.forEach(m => {
+          if (view === "cum") {
+            html += `<td class="col-cum">${row["cum_" + m.id].toFixed(1)}</td>`;
+          } else {
+            const v = row["gdd_" + m.id];
+            html += `<td class="col-gdd">${v > 0 ? v.toFixed(1) : "\u2014"}</td>`;
+          }
+        });
+        html += "</tr>";
+      }
+      tbody.innerHTML = html;
+      info.textContent = `${rows.length} days \u00b7 ${methods.length} GDD methods`;
+    }
+
+    function renderProj() {
+      if (!projData) return;
+      const { methods, rows } = projData;
+
+      let headerHtml = "<tr><th>Date</th><th>DOY</th><th>Avg Min (\u00b0F)</th><th>Avg Max (\u00b0F)</th><th>Years</th>";
+      methods.forEach(m => {
+        headerHtml += `<th>${m.name}</th>`;
+      });
+      headerHtml += "</tr>";
+      thead.innerHTML = headerHtml;
+
+      let html = "";
+      for (const row of rows) {
+        const isToday = row.date === todayStr;
+        const lowData = row.years < 3;
+        let cls = "";
+        if (isToday) cls = "today";
+        else if (lowData) cls = "low-data";
+        html += `<tr${cls ? ` class="${cls}"` : ""}>`;
+        html += `<td>${row.date}</td>`;
+        html += `<td style="color:#999">${row.doy}</td>`;
+        html += `<td class="col-temp">${row.temp_min.toFixed(1)}</td>`;
+        html += `<td class="col-temp">${row.temp_max.toFixed(1)}</td>`;
+        html += `<td class="col-years">${row.years}${lowData ? " \u26a0" : ""}</td>`;
+        methods.forEach(m => {
+          const v = row["gdd_" + m.id];
+          html += `<td class="col-gdd">${v > 0 ? v.toFixed(1) : "\u2014"}</td>`;
+        });
+        html += "</tr>";
+      }
+      tbody.innerHTML = html;
+
+      const minYears = Math.min(...rows.map(r => r.years));
+      const maxYears = Math.max(...rows.map(r => r.years));
+      info.textContent = `${rows.length} days \u00b7 ${methods.length} GDD methods \u00b7 ${minYears}\u2013${maxYears} years of historical data \u00b7 rows with < 3 years highlighted`;
+    }
+
+    // Auto-load on page open
+    loadChart();
+    load();
+  </script>
+</body>
+</html>

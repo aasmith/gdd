@@ -38,6 +38,7 @@ header h1 {
 }
 
 .header-btn:hover { opacity: 1; }
+a.header-btn { text-decoration: none; }
 
 .header-btn.active {
   opacity: 1;

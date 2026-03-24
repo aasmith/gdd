@@ -59,7 +59,7 @@ module GddCalculator
   end
 
   # Average temp_min and temp_max for each day-of-year across multiple years
-  # Returns hash: { day_of_year => { temp_min:, temp_max: } }
+  # Returns hash: { day_of_year => { temp_min:, temp_max:, years: } }
   def self.historical_averages(all_temps)
     by_doy = Hash.new { |h, k| h[k] = { mins: [], maxs: [] } }
     all_temps.each do |row|
@@ -69,7 +69,8 @@ module GddCalculator
     end
     by_doy.transform_values do |v|
       { temp_min: v[:mins].sum / v[:mins].size,
-        temp_max: v[:maxs].sum / v[:maxs].size }
+        temp_max: v[:maxs].sum / v[:maxs].size,
+        years: v[:mins].size }
     end
   end
 
