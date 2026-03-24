@@ -407,9 +407,14 @@ const Timeline = {
             .attr("width", Math.max(self.xScale(endDate) - self.xScale(newDate), 4))
             .attr("fill", willFinish ? "#5a9e3a" : "#e74c3c");
 
-          // Move label too
+          // Update label with new GDD progress
+          const today = self._formatDate(new Date());
+          const seasonEndStr = self._formatDate(self.seasonEnd);
+          const capDate = [today, endDateStr, seasonEndStr].filter(Boolean).sort()[0];
+          const gddSoFar = GDD.gddBetween(d.gdd_method_id, dateStr, capDate);
           d3.select(this.parentNode).select(".planting-label")
-            .attr("x", self.xScale(newDate) + 6);
+            .attr("x", self.xScale(newDate) + 6)
+            .text(`${d.crop_name} ${d.variety || ""} (${Math.round(gddSoFar)}/${d.gdd_required})`);
 
           // Show start/end dates outside the bar
           self._showDateLabels(d3.select(this.parentNode), dateStr, d.gdd_method_id, d.gdd_required, true);
