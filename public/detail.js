@@ -9,6 +9,14 @@ const Detail = {
     document.addEventListener("click", e => {
       if (!this.panel.contains(e.target)) this.hide();
     });
+    document.addEventListener("keydown", e => {
+      if (!this.current) return;
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        this.deleteCurrent();
+      }
+    });
   },
 
   show(planting) {
@@ -80,13 +88,18 @@ const Detail = {
     });
 
     document.getElementById("detail-delete").addEventListener("click", () => {
-      if (confirm("Delete this planting?")) {
-        if (this.onDelete) this.onDelete(planting.id);
-        this.hide();
-      }
+      this.deleteCurrent();
     });
 
     this.panel.classList.remove("hidden");
+  },
+
+  deleteCurrent() {
+    if (!this.current) return;
+    if (confirm("Delete this planting?")) {
+      if (this.onDelete) this.onDelete(this.current.id);
+      this.hide();
+    }
   },
 
   hide() {
