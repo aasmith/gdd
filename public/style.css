@@ -203,6 +203,19 @@ main {
   color: #4a6fa5;
 }
 
+#save-status {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  transition: opacity 0.3s;
+}
+
+#save-status.saving { color: #888; }
+#save-status.saved { color: #2d5016; }
+#save-status.error { color: #e74c3c; font-weight: 600; }
+#save-status.fade { opacity: 0; }
+
 #timeline {
   padding: 0;
 }

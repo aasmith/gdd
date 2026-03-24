@@ -1,15 +1,49 @@
 // api.js — fetch wrappers for all endpoints
+
+const SaveStatus = {
+  _el: null,
+  _timeout: null,
+
+  get el() {
+    if (!this._el) this._el = document.getElementById("save-status");
+    return this._el;
+  },
+
+  show(state, msg) {
+    const el = this.el;
+    if (!el) return;
+    clearTimeout(this._timeout);
+    el.textContent = msg;
+    el.className = state;
+    if (state === "saved") {
+      this._timeout = setTimeout(() => el.classList.add("fade"), 2000);
+    }
+  },
+
+  async wrap(fn) {
+    this.show("saving", "Saving\u2026");
+    try {
+      const result = await fn();
+      this.show("saved", "Saved");
+      return result;
+    } catch (e) {
+      this.show("error", "Error saving");
+      throw e;
+    }
+  },
+};
+
 const API = {
   async getSettings() {
     return (await fetch("/api/settings")).json();
   },
 
   async updateSettings(data) {
-    return (await fetch("/api/settings", {
+    return SaveStatus.wrap(() => fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async getGddMethods() {
@@ -17,23 +51,23 @@ const API = {
   },
 
   async createMethod(data) {
-    return (await fetch("/api/gdd_methods", {
+    return SaveStatus.wrap(() => fetch("/api/gdd_methods", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async updateMethod(id, data) {
-    return (await fetch(`/api/gdd_methods/${id}`, {
+    return SaveStatus.wrap(() => fetch(`/api/gdd_methods/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async deleteMethod(id) {
-    return (await fetch(`/api/gdd_methods/${id}`, { method: "DELETE" })).json();
+    return SaveStatus.wrap(() => fetch(`/api/gdd_methods/${id}`, { method: "DELETE" }).then(r => r.json()));
   },
 
   async getCrops() {
@@ -41,23 +75,23 @@ const API = {
   },
 
   async createCrop(data) {
-    return (await fetch("/api/crops", {
+    return SaveStatus.wrap(() => fetch("/api/crops", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async updateCrop(id, data) {
-    return (await fetch(`/api/crops/${id}`, {
+    return SaveStatus.wrap(() => fetch(`/api/crops/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async deleteCrop(id) {
-    return (await fetch(`/api/crops/${id}`, { method: "DELETE" })).json();
+    return SaveStatus.wrap(() => fetch(`/api/crops/${id}`, { method: "DELETE" }).then(r => r.json()));
   },
 
   async getSheets() {
@@ -65,23 +99,23 @@ const API = {
   },
 
   async createSheet(data) {
-    return (await fetch("/api/sheets", {
+    return SaveStatus.wrap(() => fetch("/api/sheets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async updateSheet(id, data) {
-    return (await fetch(`/api/sheets/${id}`, {
+    return SaveStatus.wrap(() => fetch(`/api/sheets/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async deleteSheet(id) {
-    return (await fetch(`/api/sheets/${id}`, { method: "DELETE" })).json();
+    return SaveStatus.wrap(() => fetch(`/api/sheets/${id}`, { method: "DELETE" }).then(r => r.json()));
   },
 
   async getPlantings(sheetId) {
@@ -90,23 +124,23 @@ const API = {
   },
 
   async createPlanting(data) {
-    return (await fetch("/api/plantings", {
+    return SaveStatus.wrap(() => fetch("/api/plantings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async updatePlanting(id, data) {
-    return (await fetch(`/api/plantings/${id}`, {
+    return SaveStatus.wrap(() => fetch(`/api/plantings/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })).json();
+    }).then(r => r.json()));
   },
 
   async deletePlanting(id) {
-    return (await fetch(`/api/plantings/${id}`, { method: "DELETE" })).json();
+    return SaveStatus.wrap(() => fetch(`/api/plantings/${id}`, { method: "DELETE" }).then(r => r.json()));
   },
 
   async getSeasonCurve(methodId, year) {
