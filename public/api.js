@@ -60,8 +60,33 @@ const API = {
     return (await fetch(`/api/crops/${id}`, { method: "DELETE" })).json();
   },
 
-  async getPlantings() {
-    return (await fetch("/api/plantings")).json();
+  async getSheets() {
+    return (await fetch("/api/sheets")).json();
+  },
+
+  async createSheet(data) {
+    return (await fetch("/api/sheets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })).json();
+  },
+
+  async updateSheet(id, data) {
+    return (await fetch(`/api/sheets/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })).json();
+  },
+
+  async deleteSheet(id) {
+    return (await fetch(`/api/sheets/${id}`, { method: "DELETE" })).json();
+  },
+
+  async getPlantings(sheetId) {
+    const url = sheetId ? `/api/plantings?sheet_id=${sheetId}` : "/api/plantings";
+    return (await fetch(url)).json();
   },
 
   async createPlanting(data) {

@@ -8,19 +8,20 @@ const Timeline = {
 
   snapEnabled: false,
 
-  init(container, settings) {
+  init(container, settings, year) {
     this.container = container;
     this.settings = settings;
     this.plantings = [];
-    this.rowData = []; // [{plantDate, endDate, ...}, ...] grouped by row
+    this.rowData = [];
     this.onPlantingCreated = null;
     this.onPlantingUpdated = null;
     this.onPlantingClicked = null;
 
-    const year = new Date().getFullYear();
-    this.seasonStart = new Date(`${year}-${settings.season_start}T00:00:00`);
-    this.seasonEnd = new Date(`${year}-${settings.season_end}T00:00:00`);
+    this.year = year || new Date().getFullYear();
+    this.seasonStart = new Date(`${this.year}-${settings.season_start}T00:00:00`);
+    this.seasonEnd = new Date(`${this.year}-${settings.season_end}T00:00:00`);
 
+    this._dismissConflictBar();
     this.setupSvg();
     this.setupDropZone();
   },
@@ -363,6 +364,7 @@ const Timeline = {
       .attr("stroke-width", d => self.selectedId === d.id ? 2 : 0)
       .attr("paint-order", "stroke")
       .on("click", function(event, d) {
+        if (self._justDragged) { self._justDragged = false; return; }
         event.stopPropagation();
         self.selectedId = d.id;
         self.barsGroup.selectAll(".planting-bar")
@@ -379,8 +381,12 @@ const Timeline = {
           d3.select(this).attr("opacity", 1);
           d._dragOffsetX = event.x - self.xScale(d.plantDate);
           d._dragStartRow = d._row;
+          d._dragDate = null;
+          d._dragRow = null;
+          d._hasMoved = false;
         })
         .on("drag", function(event, d) {
+          d._hasMoved = true;
           const newDate = self._snapDate(self.xScale.invert(event.x - (d._dragOffsetX || 0)));
           const dateStr = self._formatDate(newDate);
           const endDateStr = GDD.dateForGdd(d.gdd_method_id, dateStr, d.gdd_required);
@@ -414,6 +420,9 @@ const Timeline = {
         .on("end", function(event, d) {
           d3.select(this).attr("opacity", 0.85);
           self._showDateLabels(d3.select(this.parentNode), d.plant_date, d.gdd_method_id, d.gdd_required, false);
+
+          if (!d._hasMoved) return;
+          self._justDragged = true;
 
           const dateChanged = d._dragDate && d._dragDate !== d.plant_date;
           const rowChanged = d._dragRow != null && d._dragRow !== d._dragStartRow;

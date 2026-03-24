@@ -55,11 +55,26 @@
       </div>
     </aside>
     <div id="timeline-area">
+      <div id="sheet-bar">
+        <select id="year-select"></select>
+        <div id="sheet-tabs"></div>
+        <button id="add-sheet-btn" class="sheet-add-btn" title="New sheet">+</button>
+      </div>
       <section id="timeline"></section>
       <section id="gdd-chart" class="hidden"></section>
     </div>
   </main>
   <div id="detail-panel" class="hidden"></div>
+  <div id="manage-panel" class="hidden">
+    <div class="manage-header">
+      <h3>Manage Sheets</h3>
+      <button id="manage-close" class="manage-close-btn">&times;</button>
+    </div>
+    <div id="manage-content"></div>
+    <div class="manage-footer">
+      <button id="manage-add-year">+ Add Year</button>
+    </div>
+  </div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="/api.js"></script>

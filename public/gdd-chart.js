@@ -6,14 +6,14 @@ const GddChart = {
   // Color palette for methods
   colors: ["#2d5016", "#7b3294", "#d95f02", "#1b9e77", "#e7298a", "#66a61e", "#e6ab02"],
 
-  init(container, settings, methods) {
+  init(container, settings, methods, year) {
     this.container = container;
     this.settings = settings;
     this.methods = methods;
+    this.year = year || new Date().getFullYear();
 
-    const year = new Date().getFullYear();
-    this.seasonStart = new Date(`${year}-${settings.season_start}T00:00:00`);
-    this.seasonEnd = new Date(`${year}-${settings.season_end}T00:00:00`);
+    this.seasonStart = new Date(`${this.year}-${settings.season_start}T00:00:00`);
+    this.seasonEnd = new Date(`${this.year}-${settings.season_end}T00:00:00`);
   },
 
   render() {
@@ -31,7 +31,7 @@ const GddChart = {
     // Find max cumulative across all methods
     let maxCum = 0;
     this.methods.forEach(m => {
-      const curve = GDD.getCurve(m.id);
+      const curve = GDD.getCurve(m.id, this.year);
       if (curve.length) {
         maxCum = Math.max(maxCum, curve[curve.length - 1].cumulative);
       }
@@ -97,7 +97,7 @@ const GddChart = {
       .y1(d => yScale(d.cumulative));
 
     this.methods.forEach((m, i) => {
-      const curve = GDD.getCurve(m.id);
+      const curve = GDD.getCurve(m.id, this.year);
       if (!curve.length) return;
       const color = this.colors[i % this.colors.length];
 
@@ -187,7 +187,7 @@ const GddChart = {
 
       const entries = [];
       this.methods.forEach((m, i) => {
-        const curve = GDD.getCurve(m.id);
+        const curve = GDD.getCurve(m.id, this.year);
         const entry = curve.find(d => d.date >= dateStr);
         entries.push(entry);
         if (entry) {

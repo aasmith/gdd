@@ -10,6 +10,7 @@ require_relative "routes/crops"
 require_relative "routes/plantings"
 require_relative "routes/settings"
 require_relative "routes/gdd"
+require_relative "routes/sheets"
 
 class App < Sinatra::Base
   helpers Sinatra::JSON
@@ -33,4 +34,5 @@ class App < Sinatra::Base
   register Routes::Plantings
   register Routes::Settings
   register Routes::Gdd
+  register Routes::Sheets
 end
