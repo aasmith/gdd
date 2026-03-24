@@ -23,7 +23,7 @@ const Timeline = {
 
     this._dismissConflictBar();
     this.setupSvg();
-    this.setupDropZone();
+    if (!this._dropZoneReady) this.setupDropZone();
   },
 
   setupSvg() {
@@ -303,6 +303,8 @@ const Timeline = {
       const crop = Sidebar.crops.find(c => c.id === cropId);
       if (crop) this._dragCrop = crop;
     });
+
+    this._dropZoneReady = true;
   },
 
   setPlantings(plantings) {
@@ -364,7 +366,6 @@ const Timeline = {
       .attr("stroke-width", d => self.selectedId === d.id ? 2 : 0)
       .attr("paint-order", "stroke")
       .on("click", function(event, d) {
-        if (self._justDragged) { self._justDragged = false; return; }
         event.stopPropagation();
         self.selectedId = d.id;
         self.barsGroup.selectAll(".planting-bar")
@@ -383,10 +384,8 @@ const Timeline = {
           d._dragStartRow = d._row;
           d._dragDate = null;
           d._dragRow = null;
-          d._hasMoved = false;
         })
         .on("drag", function(event, d) {
-          d._hasMoved = true;
           const newDate = self._snapDate(self.xScale.invert(event.x - (d._dragOffsetX || 0)));
           const dateStr = self._formatDate(newDate);
           const endDateStr = GDD.dateForGdd(d.gdd_method_id, dateStr, d.gdd_required);
@@ -420,9 +419,6 @@ const Timeline = {
         .on("end", function(event, d) {
           d3.select(this).attr("opacity", 0.85);
           self._showDateLabels(d3.select(this.parentNode), d.plant_date, d.gdd_method_id, d.gdd_required, false);
-
-          if (!d._hasMoved) return;
-          self._justDragged = true;
 
           const dateChanged = d._dragDate && d._dragDate !== d.plant_date;
           const rowChanged = d._dragRow != null && d._dragRow !== d._dragStartRow;
