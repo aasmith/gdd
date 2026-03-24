@@ -17,8 +17,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function loadCurvesForYear(yr) {
     if (loadedYears[yr]) return;
     await Promise.all(methods.map(async m => {
-      const curve = await API.getSeasonCurve(m.id, yr);
-      GDD.loadCurve(m.id, curve, yr);
+      const resp = await API.getSeasonCurve(m.id, yr);
+      GDD.loadCurve(m.id, resp.data, yr, resp.has_projected);
     }));
     loadedYears[yr] = true;
   }
@@ -266,6 +266,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load GDD curves for this year
     await loadCurvesForYear(activeYear);
     GDD.activeYear = activeYear;
+
+    // Update data badge
+    const badge = document.getElementById("data-badge");
+    if (GDD.isProjected(activeYear)) {
+      badge.textContent = "Actual + Projected";
+      badge.className = "projected";
+    } else {
+      badge.textContent = "Actual";
+      badge.className = "actual";
+    }
 
     // Re-init timeline with this year's season bounds
     const yearSettings = { ...settings, _year: activeYear };

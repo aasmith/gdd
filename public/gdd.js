@@ -3,14 +3,21 @@
 
 const GDD = {
   curves: {}, // { "methodId:year": [{date, gdd, cumulative, projected}, ...] }
+  projectedYears: {}, // { year: true/false } — whether any method has projected data
   activeYear: new Date().getFullYear(),
 
   _key(methodId, year) {
     return `${methodId}:${year || this.activeYear}`;
   },
 
-  loadCurve(methodId, data, year) {
+  loadCurve(methodId, data, year, hasProjected) {
     this.curves[this._key(methodId, year)] = data;
+    const yr = year || this.activeYear;
+    if (hasProjected) this.projectedYears[yr] = true;
+  },
+
+  isProjected(year) {
+    return !!this.projectedYears[year || this.activeYear];
   },
 
   getCurve(methodId, year) {

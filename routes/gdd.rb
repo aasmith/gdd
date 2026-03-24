@@ -27,10 +27,13 @@ module Routes
         settings = DB[:settings].first
         year = (params[:year] || Date.today.year).to_i
 
-        json GddCalculator.season_curve(
+        curve = GddCalculator.season_curve(
           DB, method_id, year,
           settings[:season_start], settings[:season_end]
         )
+
+        has_projected = curve.any? { |r| r[:projected] }
+        json({ data: curve, has_projected: has_projected })
       end
 
       # Raw temps with GDD computed per method — for the data page
