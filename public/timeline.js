@@ -452,8 +452,12 @@ const Timeline = {
       .attr("font-weight", "500")
       .attr("pointer-events", "none")
       .text(d => {
-        const gddSoFar = GDD.gddBetween(d.gdd_method_id, d.plant_date,
-          self._formatDate(new Date()));
+        const today = self._formatDate(new Date());
+        const endDateStr = GDD.dateForGdd(d.gdd_method_id, d.plant_date, d.gdd_required);
+        const seasonEndStr = self._formatDate(self.seasonEnd);
+        // Cap at harvest date or season end or today, whichever is earliest
+        const capDate = [today, endDateStr, seasonEndStr].filter(Boolean).sort()[0];
+        const gddSoFar = GDD.gddBetween(d.gdd_method_id, d.plant_date, capDate);
         return `${d.crop_name} ${d.variety || ""} (${Math.round(gddSoFar)}/${d.gdd_required})`;
       });
 
