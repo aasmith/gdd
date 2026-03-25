@@ -29,6 +29,17 @@ class App < Sinatra::Base
     send_file File.join(settings.public_folder, "data.html")
   end
 
+  # Serve the planner for year/sheet routes
+  get "/:year" do
+    pass unless params[:year] =~ /^\d{4}$/
+    send_file File.join(settings.public_folder, "index.html")
+  end
+
+  get "/:year/:sid" do
+    pass unless params[:year] =~ /^\d{4}$/
+    send_file File.join(settings.public_folder, "index.html")
+  end
+
   register Routes::GddMethods
   register Routes::Crops
   register Routes::Plantings

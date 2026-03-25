@@ -24,7 +24,9 @@ module Routes
             Sequel[:gdd_methods][:base_f],
             Sequel[:gdd_methods][:cap_f]
           )
-        ds = ds.where(Sequel[:plantings][:sheet_id] => params[:sheet_id].to_i) if params[:sheet_id]
+        if params[:sheet_id]
+          ds = ds.where(Sequel[:plantings][:sheet_id] => params[:sheet_id].to_i)
+        end
         json ds.all
       end
 

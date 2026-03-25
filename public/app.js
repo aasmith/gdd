@@ -258,9 +258,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  async function switchSheet(sheet) {
+  async function switchSheet(sheet, { pushUrl = true } = {}) {
     activeSheet = sheet;
     activeYear = sheet.year;
+    selectedYear = sheet.year;
     renderSheetTabs();
 
     // Load GDD curves for this year
@@ -291,6 +292,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       GddChart.init(chartEl, settings, methods, activeYear);
       GddChart.render();
     }
+
+    // Update URL
+    if (pushUrl) {
+      const url = `/${activeYear}/${sheet.id}`;
+      if (location.pathname !== url) {
+        history.pushState({ year: activeYear, sheetId: sheet.id }, "", url);
+      }
+    }
+
+    renderYearSelect();
   }
 
   // --- Refresh helpers ---
@@ -418,22 +429,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     location.reload();
   });
 
+  // --- Browser navigation ---
+
+  window.addEventListener("popstate", async (e) => {
+    const sheet = resolveUrlSheet();
+    if (sheet) await switchSheet(sheet, { pushUrl: false });
+  });
+
+  function resolveUrlSheet() {
+    const parts = location.pathname.split("/").filter(Boolean);
+    // /year/sheetId
+    if (parts.length >= 2 && /^\d{4}$/.test(parts[0])) {
+      const sheetId = parseInt(parts[1]);
+      return sheets.find(s => s.id === sheetId) || null;
+    }
+    // /year — first sheet for that year
+    if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+      const yr = parseInt(parts[0]);
+      return sheets.find(s => s.year === yr) || null;
+    }
+    return null;
+  }
+
   // --- Init ---
 
   if (sheets.length === 0) {
     await createSheet("Garden", new Date().getFullYear());
   } else {
-    // Default to current year
-    const currentYear = new Date().getFullYear();
-    const yearSheets = sheets.filter(s => s.year === currentYear);
-    if (yearSheets.length) {
-      selectedYear = currentYear;
+    // Try URL first
+    const urlSheet = resolveUrlSheet();
+    if (urlSheet) {
+      await switchSheet(urlSheet, { pushUrl: false });
     } else {
-      // Fall back to most recent year with sheets
-      selectedYear = sheets[sheets.length - 1].year;
+      // Default to current year
+      const currentYear = new Date().getFullYear();
+      const yearSheets = sheets.filter(s => s.year === currentYear);
+      selectedYear = yearSheets.length ? currentYear : sheets[sheets.length - 1].year;
+      renderYearSelect();
+      const firstSheet = sheets.filter(s => s.year === selectedYear)[0] || sheets[0];
+      await switchSheet(firstSheet);
     }
-    renderYearSelect();
-    const firstSheet = sheets.filter(s => s.year === selectedYear)[0] || sheets[0];
-    await switchSheet(firstSheet);
   }
 });
