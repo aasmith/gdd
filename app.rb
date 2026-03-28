@@ -11,6 +11,7 @@ require_relative "routes/plantings"
 require_relative "routes/settings"
 require_relative "routes/gdd"
 require_relative "routes/sheets"
+require_relative "routes/event_log"
 
 class App < Sinatra::Base
   helpers Sinatra::JSON
@@ -27,6 +28,10 @@ class App < Sinatra::Base
 
   get "/data" do
     send_file File.join(settings.public_folder, "data.html")
+  end
+
+  get "/log" do
+    send_file File.join(settings.public_folder, "log.html")
   end
 
   # Serve the planner for year/sheet routes
@@ -46,4 +51,5 @@ class App < Sinatra::Base
   register Routes::Settings
   register Routes::Gdd
   register Routes::Sheets
+  register Routes::EventLog
 end
