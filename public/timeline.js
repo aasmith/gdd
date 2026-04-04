@@ -123,6 +123,22 @@ const Timeline = {
 
     // Bars group
     this.barsGroup = this.g.append("g").attr("class", "bars");
+
+    // Pill overlay — always on top of all bars
+    this.pillLayer = this.g.append("g").attr("class", "pill-layer");
+    this.startPill = this.pillLayer.append("g").attr("class", "drag-start-pill").attr("display", "none");
+    this.startPill.append("rect").attr("class", "pill-bg")
+      .attr("fill", "white").attr("fill-opacity", 0.92)
+      .attr("stroke", "#bbb").attr("stroke-width", 0.5).attr("rx", 3).attr("height", 16);
+    this.startPill.append("text").attr("class", "pill-text")
+      .attr("fill", "#333").attr("font-size", "10px").attr("font-weight", "500").attr("dy", "0.35em");
+
+    this.endPill = this.pillLayer.append("g").attr("class", "drag-end-pill").attr("display", "none");
+    this.endPill.append("rect").attr("class", "pill-bg")
+      .attr("fill", "white").attr("fill-opacity", 0.92)
+      .attr("stroke", "#bbb").attr("stroke-width", 0.5).attr("rx", 3).attr("height", 16);
+    this.endPill.append("text").attr("class", "pill-text")
+      .attr("fill", "#333").attr("font-size", "10px").attr("font-weight", "500").attr("dy", "0.35em");
   },
 
   // --- Auto-packing ---
@@ -347,8 +363,6 @@ const Timeline = {
 
     enter.append("rect").attr("class", "planting-bar");
     enter.append("text").attr("class", "planting-label");
-    enter.append("text").attr("class", "drag-start-label");
-    enter.append("text").attr("class", "drag-end-label");
 
     const merged = enter.merge(bars);
 
@@ -371,10 +385,8 @@ const Timeline = {
         self.barsGroup.selectAll(".planting-bar")
           .attr("stroke", dd => dd.id === d.id ? "#ff0000" : "none")
           .attr("stroke-width", dd => dd.id === d.id ? 2 : 0);
-        // Show start/end date labels on selected bar
-        self.barsGroup.selectAll(".planting-group").each(function(dd) {
-          self._showDateLabels(d3.select(this), dd.plant_date, dd.gdd_method_id, dd.gdd_required, dd.id === d.id);
-        });
+        // Show start/end date pills on selected bar
+        self._showDateLabels(null, d.plant_date, d.gdd_method_id, d.gdd_required, true, d._row);
         if (self.onPlantingClicked) self.onPlantingClicked(d);
       })
       .call(d3.drag()
@@ -416,14 +428,14 @@ const Timeline = {
             .attr("x", self.xScale(newDate) + 6)
             .text(`${d.crop_name} ${d.variety || ""} (${Math.round(gddSoFar)}/${d.gdd_required})`);
 
-          // Show start/end dates outside the bar
-          self._showDateLabels(d3.select(this.parentNode), dateStr, d.gdd_method_id, d.gdd_required, true);
+          // Show start/end date pills
+          self._showDateLabels(null, dateStr, d.gdd_method_id, d.gdd_required, true, d._dragRow ?? d._row);
 
           d._dragDate = dateStr;
         })
         .on("end", function(event, d) {
           d3.select(this).attr("opacity", 0.85);
-          self._showDateLabels(d3.select(this.parentNode), d.plant_date, d.gdd_method_id, d.gdd_required, false);
+          self._showDateLabels(null, d.plant_date, d.gdd_method_id, d.gdd_required, false);
 
           const dateChanged = d._dragDate && d._dragDate !== d.plant_date;
           const rowChanged = d._dragRow != null && d._dragRow !== d._dragStartRow;
@@ -466,18 +478,7 @@ const Timeline = {
         return `${d.crop_name} ${d.variety || ""} (${Math.round(gddSoFar)}/${d.gdd_required})`;
       });
 
-    merged.select(".drag-start-label")
-      .attr("y", this.barHeight / 2 + 4)
-      .attr("fill", "#666")
-      .attr("font-size", "11px")
-      .attr("text-anchor", "end")
-      .attr("display", "none");
-
-    merged.select(".drag-end-label")
-      .attr("y", this.barHeight / 2 + 4)
-      .attr("fill", "#666")
-      .attr("font-size", "11px")
-      .attr("display", "none");
+    // (pills are in the global pill layer, not per-planting)
   },
 
   // Find plantings in the same row that overlap with a proposed placement
@@ -560,18 +561,36 @@ const Timeline = {
     return d;
   },
 
-  _showDateLabels(group, plantDateStr, methodId, gddRequired, visible) {
+  _showDateLabels(group, plantDateStr, methodId, gddRequired, visible, row) {
+    this.startPill.attr("display", visible ? null : "none");
+    this.endPill.attr("display", visible ? null : "none");
+
+    if (!visible) return;
+
     const plantDate = new Date(plantDateStr + "T00:00:00");
     const endDateStr = GDD.dateForGdd(methodId, plantDateStr, gddRequired);
     const endDate = endDateStr ? new Date(endDateStr + "T00:00:00") : this.seasonEnd;
-    group.select(".drag-start-label")
-      .attr("x", this.xScale(plantDate) - 4)
-      .attr("display", visible ? null : "none")
-      .text(plantDateStr);
-    group.select(".drag-end-label")
-      .attr("x", this.xScale(endDate) + 4)
-      .attr("display", visible ? null : "none")
-      .text(this._endLabel(plantDateStr, endDateStr));
+    const hpad = 5;
+    const pillH = 16;
+    const rowY = (row ?? 0) * (this.barHeight + this.barGap);
+    const pillY = rowY + (this.barHeight - pillH) / 2;
+
+    // Start pill — right-aligned to bar start
+    this.startPill.select(".pill-text").text(plantDateStr);
+    const startTextW = this.startPill.select(".pill-text").node().getComputedTextLength();
+    const startPillW = startTextW + hpad * 2;
+    const startX = this.xScale(plantDate) - startPillW - 3;
+    this.startPill.select(".pill-bg").attr("x", startX).attr("y", pillY).attr("width", startPillW);
+    this.startPill.select(".pill-text").attr("x", startX + hpad).attr("y", pillY + pillH / 2);
+
+    // End pill — left-aligned to bar end
+    const endText = this._endLabel(plantDateStr, endDateStr);
+    this.endPill.select(".pill-text").text(endText);
+    const endTextW = this.endPill.select(".pill-text").node().getComputedTextLength();
+    const endPillW = endTextW + hpad * 2;
+    const endX = this.xScale(endDate) + 3;
+    this.endPill.select(".pill-bg").attr("x", endX).attr("y", pillY).attr("width", endPillW);
+    this.endPill.select(".pill-text").attr("x", endX + hpad).attr("y", pillY + pillH / 2);
   },
 
   _daysBetween(dateStrA, dateStrB) {

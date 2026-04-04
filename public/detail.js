@@ -108,7 +108,7 @@ const Detail = {
     Timeline.barsGroup.selectAll(".planting-bar")
       .attr("stroke", "none")
       .attr("stroke-width", 0);
-    Timeline.barsGroup.selectAll(".drag-start-label, .drag-end-label")
-      .attr("display", "none");
+    Timeline.startPill.attr("display", "none");
+    Timeline.endPill.attr("display", "none");
   },
 };
